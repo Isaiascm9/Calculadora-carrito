@@ -115,19 +115,21 @@
             background: #128C7E;
         }
 
+        .footer-credit {
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #94a3b8; 
+            margin-top: 2rem;
+            padding-bottom: 2.5rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
         .header-bg {
             background: #0f172a;
             border-radius: 0 0 2.5rem 2.5rem;
-        }
-
-        .footer-credit {
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #64748b;
-            margin-top: 0.8rem;
-            padding-bottom: 2rem;
-            letter-spacing: 0.02em;
         }
 
         #toast {
@@ -204,7 +206,6 @@
             border-color: #9b2c2c55;
         }
 
-        /* Clase específica para forzar el negro en el precio */
         .item-price-main {
             color: var(--price-main);
         }
@@ -228,7 +229,8 @@
                         </h1>
                         <button onclick="toggleTheme()" class="theme-toggle" title="Cambiar tema">
                             <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
-                                <path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.11,104.11,0,1,0,129.8,129.8A8,8,0,0,0,233.54,142.23Z"></path>
+                                <!-- Icono de Luna (predeterminado ya que inicia en oscuro o luz según variable) -->
+                                <path id="icon-path" d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.11,104.11,0,1,0,129.8,129.8A8,8,0,0,0,233.54,142.23Z"></path>
                             </svg>
                         </button>
                     </div>
@@ -288,9 +290,6 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,0V140H40a12,12,0,0,1,0-24h76V40a12,12,0,0,1,24,0v76h76A12,12,0,0,1,228,128Z"></path></svg>
                     </button>
                 </div>
-                <p class="text-[10px] text-center font-bold text-slate-400 uppercase tracking-tight">
-                    Presiona enter o el botón "+" para sumar
-                </p>
             </div>
         </div>
 
@@ -305,7 +304,7 @@
             <button onclick="sendWhatsApp()" class="btn-send-text">
                 Enviar Factura
             </button>
-            <div class="footer-credit">Generado por Feedback 2026</div>
+            <div class="footer-credit">Generado por Feedback</div>
         </div>
     </main>
 
@@ -322,7 +321,7 @@
         let currentUser = null;
         let db = null;
         let auth = null;
-        let appId = 'local-app';
+        let appId = typeof __app_id !== 'undefined' ? __app_id : 'mi-carrito-premium';
 
         const parse = (val) => {
             if (!val) return 0;
@@ -341,36 +340,11 @@
             setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
         };
 
-        const saveToLocal = () => {
-            if (!hasFirebaseEnv) {
-                localStorage.setItem('cart_items', JSON.stringify(shoppingCart));
-                localStorage.setItem('cart_profile', JSON.stringify({
-                    tasa: document.getElementById('tasa-input').value,
-                    shopName: document.getElementById('shop-name').value
-                }));
-            }
-        };
-
-        const loadFromLocal = () => {
-            if (!hasFirebaseEnv) {
-                const savedItems = localStorage.getItem('cart_items');
-                const savedProfile = localStorage.getItem('cart_profile');
-                if (savedItems) shoppingCart = JSON.parse(savedItems);
-                if (savedProfile) {
-                    const profile = JSON.parse(savedProfile);
-                    document.getElementById('tasa-input').value = profile.tasa || "44.14";
-                    document.getElementById('shop-name').value = profile.shopName || "";
-                }
-                render();
-            }
-        };
-
         if (hasFirebaseEnv) {
             const firebaseConfig = JSON.parse(__firebase_config);
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
             const initAuth = async () => {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -389,7 +363,6 @@
             });
             initAuth();
         } else {
-            loadFromLocal();
             hideLoading();
         }
 
@@ -422,16 +395,24 @@
             if (currentUser && db) {
                 const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'settings');
                 await setDoc(profileRef, { tasa, shopName }, { merge: true });
-            } else {
-                saveToLocal();
-                render();
             }
         };
 
         window.toggleTheme = () => {
             isDarkMode = !isDarkMode;
-            document.body.classList.toggle('dark', isDarkMode);
-            render(); // Rerender para aplicar el color de precio correctamente
+            const iconPath = document.getElementById('icon-path');
+            
+            if (isDarkMode) {
+                document.body.classList.add('dark');
+                // Mantener icono de luna en modo oscuro (es lo opuesto a lo que se ve en la web, pero aquí se muestra lo que representa el modo)
+                // O según tu petición: al cambiar a CLARO debe verse el SOL. 
+                // Por lo tanto, si estamos en OSCURO, mostramos el icono del SOL para invitar a cambiar a claro.
+                iconPath.setAttribute('d', 'M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-8,0a56,56,0,1,0-56,56A56.06,56.06,0,0,0,184,128Zm32-8h24a8,8,0,0,1,0,16H216a8,8,0,0,1,0-16ZM40,128a8,8,0,0,0-8-8H8a8,8,0,0,0,0,16H32A8,8,0,0,0,40,128Zm150.19,62.19l17,17a8,8,0,0,0,11.31-11.32l-17-17a8,8,0,0,0-11.32,11.32ZM65.81,65.81l-17-17A8,8,0,0,0,37.52,60.1l17,17a8,8,0,1,0,11.29-11.29Zm126.38-17a8,8,0,0,0-11.32,11.32l17,17a8,8,0,0,0,11.32-11.32ZM65.81,190.19l-17,17a8,8,0,0,0,11.32,11.32l17-17a8,8,0,0,0-11.32-11.32ZM120,216v24a8,8,0,0,0,16,0V216a8,8,0,0,0-16,0Z');
+            } else {
+                document.body.classList.remove('dark');
+                // Al estar en modo CLARO, mostramos la LUNA para invitar a cambiar a oscuro.
+                iconPath.setAttribute('d', 'M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.11,104.11,0,1,0,129.8,129.8A8,8,0,0,0,233.54,142.23Z');
+            }
         };
 
         window.changeMode = (mode) => {
@@ -460,11 +441,6 @@
             if (currentUser && db) {
                 const itemsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'items');
                 await addDoc(itemsRef, item);
-            } else {
-                item.id = Date.now().toString();
-                shoppingCart.unshift(item);
-                saveToLocal();
-                render();
             }
             
             pInput.value = '';
@@ -477,10 +453,6 @@
             if (currentUser && db) {
                 const itemRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'items', id);
                 await deleteDoc(itemRef);
-            } else {
-                shoppingCart = shoppingCart.filter(i => i.id !== id);
-                saveToLocal();
-                render();
             }
         };
 
@@ -490,26 +462,8 @@
                 for (const item of shoppingCart) {
                     await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'items', item.id));
                 }
-            } else {
-                shoppingCart = [];
-                saveToLocal();
-                render();
             }
             showToast("Carrito Vacío");
-        };
-
-        const recalculateTotals = () => {
-            const tasa = parse(document.getElementById('tasa-input').value) || 1;
-            let tUsd = 0, tVes = 0;
-            
-            shoppingCart.forEach(i => {
-                const usd = i.mode === 'USD' ? i.original : i.original / tasa;
-                const ves = i.mode === 'VES' ? i.original : i.original * tasa;
-                tUsd += usd; tVes += ves;
-            });
-
-            document.getElementById('total-usd').innerText = tUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-            document.getElementById('total-ves').innerText = tVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
         };
 
         const render = () => {
@@ -522,9 +476,15 @@
             action.style.display = shoppingCart.length > 0 ? 'block' : 'none';
             btnClear.classList.toggle('hidden', shoppingCart.length === 0);
 
+            let tUsd = 0, tVes = 0;
+
             shoppingCart.forEach(item => {
                 const vesValue = item.mode === 'VES' ? item.original : item.original * tasa;
                 const usdValue = item.mode === 'USD' ? item.original : item.original / tasa;
+                
+                tUsd += usdValue;
+                tVes += vesValue;
+
                 const alt = item.mode === 'USD' 
                     ? `≈ Bs ${vesValue.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}` 
                     : `≈ $ ${usdValue.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
@@ -543,7 +503,9 @@
                 `;
                 list.appendChild(card);
             });
-            recalculateTotals();
+
+            document.getElementById('total-usd').innerText = tUsd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+            document.getElementById('total-ves').innerText = tVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2});
         };
 
         window.sendWhatsApp = () => {
@@ -565,7 +527,7 @@
             m += `🇻🇪 TOTAL BS: Bs ${tv.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}\n`;
             m += `📊 TASA: ${tasaValue} Bs/$\n`;
             m += `━━━━━━━━━━━━━━━\n`;
-            m += `Generado por Feedback 2026`;
+            m += `Generado por Feedback`;
             window.open(`https://wa.me/?text=${encodeURIComponent(m)}`);
         };
 
