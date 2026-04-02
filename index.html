@@ -312,7 +312,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // VERIFICAR ENTORNO
         const hasFirebaseEnv = typeof __firebase_config !== 'undefined';
         
         let shoppingCart = [];
@@ -323,7 +322,6 @@
         let auth = null;
         let appId = 'local-app';
 
-        // UTILIDADES
         const parse = (val) => {
             if (!val) return 0;
             return parseFloat(val.toString().replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
@@ -341,7 +339,6 @@
             setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
         };
 
-        // GESTIÓN DE LOCALSTORAGE (CACHÉ DEL TELÉFONO)
         const saveToLocal = () => {
             if (!hasFirebaseEnv) {
                 localStorage.setItem('cart_items', JSON.stringify(shoppingCart));
@@ -356,7 +353,6 @@
             if (!hasFirebaseEnv) {
                 const savedItems = localStorage.getItem('cart_items');
                 const savedProfile = localStorage.getItem('cart_profile');
-                
                 if (savedItems) shoppingCart = JSON.parse(savedItems);
                 if (savedProfile) {
                     const profile = JSON.parse(savedProfile);
@@ -367,7 +363,6 @@
             }
         };
 
-        // INICIALIZACIÓN
         if (hasFirebaseEnv) {
             const firebaseConfig = JSON.parse(__firebase_config);
             const app = initializeApp(firebaseConfig);
@@ -403,7 +398,7 @@
                     const data = snap.data();
                     document.getElementById('tasa-input').value = data.tasa || "44.14";
                     document.getElementById('shop-name').value = data.shopName || "";
-                    render(); // Renderizar todo al recibir cambios de perfil
+                    render();
                 }
             });
 
@@ -418,15 +413,17 @@
             });
         };
 
+        // CORRECCIÓN PARA GITHUB (ACTUALIZACIÓN EN TIEMPO REAL)
         window.saveProfile = async () => {
+            const tasa = document.getElementById('tasa-input').value;
+            const shopName = document.getElementById('shop-name').value;
+
             if (currentUser && db) {
-                const tasa = document.getElementById('tasa-input').value;
-                const shopName = document.getElementById('shop-name').value;
                 const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'settings');
                 await setDoc(profileRef, { tasa, shopName }, { merge: true });
             } else {
                 saveToLocal();
-                render(); // Actualizar la vista al cambiar la tasa manualmente
+                render(); // Esto fuerza que GitHub Pages actualice la lista de inmediato
             }
         };
 
