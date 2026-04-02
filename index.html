@@ -167,12 +167,12 @@
         .loading-overlay {
             position: fixed;
             inset: 0;
-            background: var(--bg-body);
+            background: #f8fafc;
             z-index: 100;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.5s;
+            transition: opacity 0.4s ease-out;
         }
 
         .spinner {
@@ -209,6 +209,17 @@
         .item-price-main {
             color: var(--price-main);
         }
+
+        .info-help-text {
+            text-align: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.75rem;
+            padding: 0 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -228,9 +239,8 @@
                             <span>🛒</span> Mi Carrito
                         </h1>
                         <button onclick="toggleTheme()" class="theme-toggle" title="Cambiar tema">
-                            <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
-                                <!-- Icono de Luna (predeterminado ya que inicia en oscuro o luz según variable) -->
-                                <path id="icon-path" d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.11,104.11,0,1,0,129.8,129.8A8,8,0,0,0,233.54,142.23Z"></path>
+                            <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                                <path id="icon-path" d="M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-8,0a56,56,0,1,0-56,56A56.06,56.06,0,0,0,184,128Zm32-8h24a8,8,0,0,1,0,16H216a8,8,0,0,1,0-16ZM40,128a8,8,0,0,0-8-8H8a8,8,0,0,0,0,16H32A8,8,0,0,0,40,128Zm150.19,62.19l17,17a8,8,0,0,0,11.31-11.32l-17-17a8,8,0,0,0-11.32,11.32ZM65.81,65.81l-17-17A8,8,0,0,0,37.52,60.1l17,17a8,8,0,1,0,11.29-11.29Zm126.38-17a8,8,0,0,0-11.32,11.32l17,17a8,8,0,0,0,11.32-11.32ZM65.81,190.19l-17,17a8,8,0,0,0,11.32,11.32l17-17a8,8,0,0,0-11.32-11.32ZM120,216v24a8,8,0,0,0,16,0V216a8,8,0,0,0-16,0Z"></path>
                             </svg>
                         </button>
                     </div>
@@ -284,11 +294,15 @@
                 <div class="flex gap-3">
                     <div class="input-wrapper flex-1 px-4 py-2.5">
                         <label id="price-label" class="text-[8px] font-black text-slate-400 uppercase block mb-0.5">Precio $</label>
-                        <input type="text" id="prod-price" inputmode="decimal" class="text-3xl font-900" placeholder="0.00">
+                        <input type="text" id="prod-price" inputmode="decimal" class="text-3xl font-900" placeholder="0.00" oninput="formatInputPrice(this)">
                     </div>
                     <button id="add-btn" onclick="addToList()" class="btn-plus-dynamic text-white w-14 h-14 rounded-3xl flex items-center justify-center shadow-lg active:scale-90 transition-transform" style="background-color: #22c55e;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="white" viewBox="0 0 256 256"><path d="M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,0V140H40a12,12,0,0,1,0-24h76V40a12,12,0,0,1,24,0v76h76A12,12,0,0,1,228,128Z"></path></svg>
                     </button>
+                </div>
+                
+                <div class="info-help-text">
+                    PRESIONA ENTER O EL BOTÓN "+" PARA SUMAR
                 </div>
             </div>
         </div>
@@ -313,7 +327,10 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const hasFirebaseEnv = typeof __firebase_config !== 'undefined';
+        const MOON_PATH = 'M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.11,104.11,0,1,0,129.8,129.8A8,8,0,0,0,233.54,142.23Z';
+        const SUN_PATH = 'M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-8,0a56,56,0,1,0-56,56A56.06,56.06,0,0,0,184,128Zm32-8h24a8,8,0,0,1,0,16H216a8,8,0,0,1,0-16ZM40,128a8,8,0,0,0-8-8H8a8,8,0,0,0,0,16H32A8,8,0,0,0,40,128Zm150.19,62.19l17,17a8,8,0,0,0,11.31-11.32l-17-17a8,8,0,0,0-11.32,11.32ZM65.81,65.81l-17-17A8,8,0,0,0,37.52,60.1l17,17a8,8,0,1,0,11.29-11.29Zm126.38-17a8,8,0,0,0-11.32,11.32l17,17a8,8,0,0,0,11.32-11.32ZM65.81,190.19l-17,17a8,8,0,0,0,11.32,11.32l17-17a8,8,0,0,0-11.32-11.32ZM120,216v24a8,8,0,0,0,16,0V216a8,8,0,0,0-16,0Z';
+
+        const hasFirebaseEnv = typeof __firebase_config !== 'undefined' && __firebase_config;
         
         let shoppingCart = [];
         let currentMode = 'USD';
@@ -325,7 +342,22 @@
 
         const parse = (val) => {
             if (!val) return 0;
-            return parseFloat(val.toString().replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+            // Primero quitamos los puntos de miles (formato visual)
+            let clean = val.toString().replace(/\./g, '');
+            // Luego cambiamos coma por punto decimal si existe
+            clean = clean.replace(',', '.');
+            return parseFloat(clean) || 0;
+        };
+
+        // Formateo visual en tiempo real
+        window.formatInputPrice = (input) => {
+            let value = input.value.replace(/\D/g, ""); // Solo números
+            if (value === "") {
+                input.value = "";
+                return;
+            }
+            // Formatear con puntos de miles usando configuración regional es-VE o es-ES
+            input.value = new Intl.NumberFormat('de-DE').format(value);
         };
 
         const showToast = (text = "¡Sumado!") => {
@@ -336,32 +368,43 @@
         };
 
         const hideLoading = () => {
-            document.getElementById('loading').style.opacity = '0';
-            setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+            const loader = document.getElementById('loading');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
         };
 
+        setTimeout(hideLoading, 3000);
+
         if (hasFirebaseEnv) {
-            const firebaseConfig = JSON.parse(__firebase_config);
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
 
-            const initAuth = async () => {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            };
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (e) {
+                        hideLoading();
+                    }
+                };
 
-            onAuthStateChanged(auth, (user) => {
-                currentUser = user;
-                if (user) {
-                    setupFirebaseListeners(user.uid);
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) setupFirebaseListeners(user.uid);
                     hideLoading();
-                }
-            });
-            initAuth();
+                });
+                initAuth();
+            } catch (e) {
+                hideLoading();
+            }
         } else {
             hideLoading();
         }
@@ -375,7 +418,7 @@
                     document.getElementById('shop-name').value = data.shopName || "";
                     render();
                 }
-            });
+            }, (err) => console.log(err));
 
             const itemsRef = collection(db, 'artifacts', appId, 'users', uid, 'items');
             onSnapshot(itemsRef, (snap) => {
@@ -385,13 +428,12 @@
                 });
                 shoppingCart.sort((a, b) => b.createdAt - a.createdAt);
                 render();
-            });
+            }, (err) => console.log(err));
         };
 
         window.saveProfile = async () => {
             const tasa = document.getElementById('tasa-input').value;
             const shopName = document.getElementById('shop-name').value;
-
             if (currentUser && db) {
                 const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'settings');
                 await setDoc(profileRef, { tasa, shopName }, { merge: true });
@@ -401,17 +443,12 @@
         window.toggleTheme = () => {
             isDarkMode = !isDarkMode;
             const iconPath = document.getElementById('icon-path');
-            
             if (isDarkMode) {
                 document.body.classList.add('dark');
-                // Mantener icono de luna en modo oscuro (es lo opuesto a lo que se ve en la web, pero aquí se muestra lo que representa el modo)
-                // O según tu petición: al cambiar a CLARO debe verse el SOL. 
-                // Por lo tanto, si estamos en OSCURO, mostramos el icono del SOL para invitar a cambiar a claro.
-                iconPath.setAttribute('d', 'M120,40V16a8,8,0,0,1,16,0V40a8,8,0,0,1-16,0Zm72,88a64,64,0,1,1-64-64A64.07,64.07,0,0,1,192,128Zm-8,0a56,56,0,1,0-56,56A56.06,56.06,0,0,0,184,128Zm32-8h24a8,8,0,0,1,0,16H216a8,8,0,0,1,0-16ZM40,128a8,8,0,0,0-8-8H8a8,8,0,0,0,0,16H32A8,8,0,0,0,40,128Zm150.19,62.19l17,17a8,8,0,0,0,11.31-11.32l-17-17a8,8,0,0,0-11.32,11.32ZM65.81,65.81l-17-17A8,8,0,0,0,37.52,60.1l17,17a8,8,0,1,0,11.29-11.29Zm126.38-17a8,8,0,0,0-11.32,11.32l17,17a8,8,0,0,0,11.32-11.32ZM65.81,190.19l-17,17a8,8,0,0,0,11.32,11.32l17-17a8,8,0,0,0-11.32-11.32ZM120,216v24a8,8,0,0,0,16,0V216a8,8,0,0,0-16,0Z');
+                iconPath.setAttribute('d', MOON_PATH);
             } else {
                 document.body.classList.remove('dark');
-                // Al estar en modo CLARO, mostramos la LUNA para invitar a cambiar a oscuro.
-                iconPath.setAttribute('d', 'M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.11,104.11,0,1,0,129.8,129.8A8,8,0,0,0,233.54,142.23Z');
+                iconPath.setAttribute('d', SUN_PATH);
             }
         };
 
@@ -441,6 +478,9 @@
             if (currentUser && db) {
                 const itemsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'items');
                 await addDoc(itemsRef, item);
+            } else {
+                shoppingCart.unshift({...item, id: Date.now().toString()});
+                render();
             }
             
             pInput.value = '';
@@ -453,6 +493,9 @@
             if (currentUser && db) {
                 const itemRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'items', id);
                 await deleteDoc(itemRef);
+            } else {
+                shoppingCart = shoppingCart.filter(i => i.id !== id);
+                render();
             }
         };
 
@@ -462,6 +505,9 @@
                 for (const item of shoppingCart) {
                     await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'items', item.id));
                 }
+            } else {
+                shoppingCart = [];
+                render();
             }
             showToast("Carrito Vacío");
         };
@@ -537,6 +583,7 @@
 
         const now = new Date();
         document.getElementById('date-display').innerText = now.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' });
+        render();
     </script>
 </body>
 </html>
