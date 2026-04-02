@@ -230,7 +230,7 @@
                             </svg>
                         </button>
                     </div>
-                    <input type="text" id="shop-name" onchange="updateProfile()"
+                    <input type="text" id="shop-name" oninput="saveProfile()"
                            class="text-slate-400 font-500 text-xs border-b border-white/10 py-1" 
                            placeholder="Nombre del establecimiento">
                 </div>
@@ -238,7 +238,7 @@
                 <div class="text-right">
                     <div class="bg-slate-800/80 px-3 py-1.5 rounded-2xl">
                         <p class="text-[8px] font-black text-slate-500 uppercase">Tasa Bs/$</p>
-                        <input type="text" id="tasa-input" inputmode="decimal" value="44.14" onchange="updateProfile()"
+                        <input type="text" id="tasa-input" inputmode="decimal" value="44.14" oninput="saveProfile()"
                                class="font-800 text-white text-lg text-right w-16">
                     </div>
                     <p id="date-display" class="text-[9px] font-bold text-slate-500 mt-1 uppercase text-right tracking-tighter"></p>
@@ -307,14 +307,12 @@
         </div>
     </main>
 
-    <!-- Script de lógica con manejo de entorno seguro -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CONFIGURACIÓN DE SEGURIDAD PARA GITHUB
-        // Si no existen las variables globales del editor, el app no se queda pegada
+        // VERIFICAR ENTORNO
         const hasFirebaseEnv = typeof __firebase_config !== 'undefined';
         
         let shoppingCart = [];
@@ -325,6 +323,7 @@
         let auth = null;
         let appId = 'local-app';
 
+        // UTILIDADES
         const parse = (val) => {
             if (!val) return 0;
             return parseFloat(val.toString().replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
@@ -340,6 +339,32 @@
         const hideLoading = () => {
             document.getElementById('loading').style.opacity = '0';
             setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+        };
+
+        // GESTIÓN DE LOCALSTORAGE (CACHÉ DEL TELÉFONO)
+        const saveToLocal = () => {
+            if (!hasFirebaseEnv) {
+                localStorage.setItem('cart_items', JSON.stringify(shoppingCart));
+                localStorage.setItem('cart_profile', JSON.stringify({
+                    tasa: document.getElementById('tasa-input').value,
+                    shopName: document.getElementById('shop-name').value
+                }));
+            }
+        };
+
+        const loadFromLocal = () => {
+            if (!hasFirebaseEnv) {
+                const savedItems = localStorage.getItem('cart_items');
+                const savedProfile = localStorage.getItem('cart_profile');
+                
+                if (savedItems) shoppingCart = JSON.parse(savedItems);
+                if (savedProfile) {
+                    const profile = JSON.parse(savedProfile);
+                    document.getElementById('tasa-input').value = profile.tasa || "44.14";
+                    document.getElementById('shop-name').value = profile.shopName || "";
+                }
+                render();
+            }
         };
 
         // INICIALIZACIÓN
@@ -361,26 +386,24 @@
             onAuthStateChanged(auth, (user) => {
                 currentUser = user;
                 if (user) {
-                    setupListeners(user.uid);
+                    setupFirebaseListeners(user.uid);
                     hideLoading();
                 }
             });
             initAuth();
         } else {
-            // MODO LOCAL (Si se sube a GitHub sin configurar Firebase)
-            console.warn("Entorno Firebase no detectado. Funcionando en modo local.");
+            loadFromLocal();
             hideLoading();
-            render();
         }
 
-        const setupListeners = (uid) => {
+        const setupFirebaseListeners = (uid) => {
             const profileRef = doc(db, 'artifacts', appId, 'users', uid, 'profile', 'settings');
             onSnapshot(profileRef, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
                     document.getElementById('tasa-input').value = data.tasa || "44.14";
                     document.getElementById('shop-name').value = data.shopName || "";
-                    recalculateTotals();
+                    render(); // Renderizar todo al recibir cambios de perfil
                 }
             });
 
@@ -395,12 +418,16 @@
             });
         };
 
-        window.updateProfile = async () => {
-            if (!currentUser || !db) return;
-            const tasa = document.getElementById('tasa-input').value;
-            const shopName = document.getElementById('shop-name').value;
-            const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'settings');
-            await setDoc(profileRef, { tasa, shopName }, { merge: true });
+        window.saveProfile = async () => {
+            if (currentUser && db) {
+                const tasa = document.getElementById('tasa-input').value;
+                const shopName = document.getElementById('shop-name').value;
+                const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'settings');
+                await setDoc(profileRef, { tasa, shopName }, { merge: true });
+            } else {
+                saveToLocal();
+                render(); // Actualizar la vista al cambiar la tasa manualmente
+            }
         };
 
         window.toggleTheme = () => {
@@ -413,7 +440,6 @@
             document.getElementById('mode-usd').className = mode === 'USD' ? 'tab-btn tab-active' : 'tab-btn';
             document.getElementById('mode-ves').className = mode === 'VES' ? 'tab-btn tab-active' : 'tab-btn';
             document.getElementById('price-label').innerText = mode === 'USD' ? 'Precio $' : 'Precio Bs';
-            
             const addBtn = document.getElementById('add-btn');
             addBtn.style.backgroundColor = mode === 'USD' ? '#22c55e' : '#2563eb';
             document.getElementById('prod-price').focus();
@@ -426,7 +452,7 @@
             if (price <= 0) return;
 
             const item = {
-                name: nInput.value.trim() || 'Item ' + (shoppingCart.length + 1),
+                name: nInput.value.trim() || 'Artículo ' + (shoppingCart.length + 1),
                 original: price,
                 mode: currentMode,
                 createdAt: Date.now()
@@ -436,9 +462,9 @@
                 const itemsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'items');
                 await addDoc(itemsRef, item);
             } else {
-                // Modo local
                 item.id = Date.now().toString();
                 shoppingCart.unshift(item);
+                saveToLocal();
                 render();
             }
             
@@ -454,6 +480,7 @@
                 await deleteDoc(itemRef);
             } else {
                 shoppingCart = shoppingCart.filter(i => i.id !== id);
+                saveToLocal();
                 render();
             }
         };
@@ -466,6 +493,7 @@
                 }
             } else {
                 shoppingCart = [];
+                saveToLocal();
                 render();
             }
             showToast("Carrito Vacío");
